@@ -11,34 +11,34 @@ import time
 import urlparse
 
 import feedparser
-import humbug
+import zulip
 
-RSS_DATA_DIR = os.path.expanduser(os.path.join('~', '.cache', 'humbug-rss'))
+RSS_DATA_DIR = os.path.expanduser(os.path.join('~', '.cache', 'zulip-rss'))
 OLDNESS_THRESHOLD = 30 # days
 
-usage = """Usage: Send summaries of RSS entries for your favorite feeds to Humbug.
+usage = """Usage: Send summaries of RSS entries for your favorite feeds to Zulip.
 
 This bot requires the feedparser module.
 
 To use this script:
 
 1. Create an RSS feed file containing 1 feed URL per line (default feed
-   file location: ~/.cache/humbug-rss/rss-feeds)
+   file location: ~/.cache/zulip-rss/rss-feeds)
 2. Subscribe to the stream that will receive RSS updates (default stream: rss)
-3. create a ~/.humbugrc, or specify user and api-key with command line arguments
+3. create a ~/.zuliprc, or specify user and api-key with command line arguments
 4. Test the script by running it manually, like this:
 
-/usr/local/share/humbug/demos/rss-bot
+/usr/local/share/zulip/demos/rss-bot
 
 You can customize the location on the feed file and recipient stream, e.g.:
 
-/usr/local/share/humbug/demos/rss-bot --feed-file=/path/to/my-feeds --stream=my-rss-stream
+/usr/local/share/zulip/demos/rss-bot --feed-file=/path/to/my-feeds --stream=my-rss-stream
 
 4. Configure a crontab entry for this script. A sample crontab entry for
 processing feeds stored in the default location and sending to the default
 stream every 5 minutes is:
 
-*/5 * * * * /usr/local/share/humbug/demos/rss-bot"""
+*/5 * * * * /usr/local/share/zulip/demos/rss-bot"""
 
 parser = optparse.OptionParser(usage)
 parser.add_option('--stream',
@@ -56,7 +56,7 @@ parser.add_option('--feed-file',
                   help='The file containing a list of RSS feed URLs to follow, one URL per line',
                   default=os.path.join(RSS_DATA_DIR, "rss-feeds"),
                   action='store')
-parser.add_option_group(humbug.generate_option_group(parser))
+parser.add_option_group(zulip.generate_option_group(parser))
 (opts, args) = parser.parse_args()
 
 def mkdir_p(path):
@@ -113,8 +113,9 @@ def compute_entry_hash(entry):
     entry_time = entry.get("published", entry.get("updated"))
     return hashlib.md5(entry.id + entry_time).hexdigest()
 
-def send_humbug(entry, feed_name):
-    content = "**%s**\n%s\n%s" % (entry.title,
+def send_zulip(entry, feed_name):
+    content = "**[%s](%s)**\n%s\n%s" % (entry.title,
+                                  entry.link,
                                   strip_tags(entry.summary),
                                   entry.link)
     message = {"type": "stream",
@@ -131,7 +132,7 @@ try:
 except IOError:
     log_error_and_exit("Unable to read feed file at %s." % (opts.feed_file,))
 
-client = humbug.Client(email=opts.email, api_key=opts.api_key,
+client = zulip.Client(email=opts.email, api_key=opts.api_key,
                        site=opts.site)
 
 first_message = True
@@ -164,7 +165,7 @@ for feed_url in feed_urls:
             # entries in reverse chronological order.
             break
 
-        response = send_humbug(entry, data.feed.title)
+        response = send_zulip(entry, data.feed.title)
         if response["result"] != "success":
             logger.error("Error processing %s" % (feed_url,))
             logger.error(response)
@@ -181,4 +182,4 @@ for feed_url in feed_urls:
         for hash in new_hashes:
             f.write(hash + "\n")
 
-    logger.info("Sent humbugs for %d %s entries" % (len(new_hashes), feed_url))
+    logger.info("Sent zulips for %d %s entries" % (len(new_hashes), feed_url))

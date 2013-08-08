@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import humbug
+import zulip
 
-import glob
 import os
 from distutils.core import setup
 
@@ -13,10 +12,10 @@ def recur_expand(target_root, dir):
     if len(paths):
       yield os.path.join(target_root, root), paths
 
-setup(name='humbug',
-      version=humbug.__version__,
-      description='Bindings for the Humbug message API',
-      author='Humbug, Inc.',
+setup(name='zulip',
+      version=zulip.__version__,
+      description='Bindings for the Zulip message API',
+      author='Zulip, Inc.',
       author_email='humbug@humbughq.com',
       classifiers=[
           'Development Status :: 3 - Alpha',
@@ -25,12 +24,15 @@ setup(name='humbug',
           'License :: OSI Approved :: MIT License',
           'Topic :: Communications :: Chat',
       ],
-      url='https://humbughq.com/dist/api/',
-      packages=['humbug'],
-      data_files=[('share/humbug/examples', ["examples/humbugrc", "examples/send-message"])] + \
-          list(recur_expand('share/humbug', 'integrations/')) + \
-          [('share/humbug/demos',
+      url='https://www.zulip.com/dist/api/',
+      packages=['zulip'],
+      data_files=[('share/zulip/examples', ["examples/zuliprc", "examples/send-message", "examples/subscribe",
+                                             "examples/get-public-streams", "examples/unsubscribe",
+                                             "examples/list-members", "examples/list-subscriptions",
+                                             "examples/print-messages"])] + \
+          list(recur_expand('share/zulip', 'integrations/')) + \
+          [('share/zulip/demos',
             [os.path.join("demos", relpath) for relpath in
             os.listdir("demos")])],
-      scripts=["bin/humbug-send"],
+      scripts=["bin/zulip-send"],
      )

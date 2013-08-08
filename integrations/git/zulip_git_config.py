@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright © 2013 Humbug, Inc.
+# Copyright © 2013 Zulip, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,8 +23,8 @@
 
 
 # Change these values to configure authentication for the plugin
-HUMBUG_USER = "git-bot@example.com"
-HUMBUG_API_KEY = "0123456789abcdef0123456789abcdef"
+ZULIP_USER = "git-bot@example.com"
+ZULIP_API_KEY = "0123456789abcdef0123456789abcdef"
 
 # commit_notice_destination() lets you customize where commit notices
 # are sent to with the full power of a Python function.
@@ -49,9 +49,9 @@ def commit_notice_destination(repo, branch, commit):
     # Return None for cases where you don't want a notice sent
     return None
 
-## If properly installed, the Humbug API should be in your import
+## If properly installed, the Zulip API should be in your import
 ## path, but if not, set a custom path below
-HUMBUG_API_PATH = None
+ZULIP_API_PATH = None
 
-# This should not need to change unless you have a custom Humbug subdomain.
-HUMBUG_SITE = "https://humbughq.com"
+# This should not need to change unless you have a custom Zulip subdomain.
+ZULIP_SITE = "https://api.zulip.com"

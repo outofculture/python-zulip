@@ -1,9 +1,9 @@
 Metadata-Version: 1.1
-Name: humbug
-Version: 0.1.9
-Summary: Bindings for the Humbug message API
-Home-page: https://humbughq.com/dist/api/
-Author: Humbug, Inc.
+Name: zulip
+Version: 0.2.0
+Summary: Bindings for the Zulip message API
+Home-page: https://www.zulip.com/dist/api/
+Author: Zulip, Inc.
 Author-email: humbug@humbughq.com
 License: UNKNOWN
 Description: UNKNOWN

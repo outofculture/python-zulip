@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Humbug notification post-commit hook.
-# Copyright © 2012-2013 Humbug, Inc.
+# Zulip notification post-commit hook.
+# Copyright © 2012-2013 Zulip, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -31,22 +31,20 @@
 
 import os
 import sys
-import subprocess
-import time
 import os.path
 import pysvn
 
 sys.path.insert(0, os.path.dirname(__file__))
-import humbug_svn_config as config
+import zulip_svn_config as config
 
-if config.HUMBUG_API_PATH is not None:
-    sys.path.append(config.HUMBUG_API_PATH)
+if config.ZULIP_API_PATH is not None:
+    sys.path.append(config.ZULIP_API_PATH)
 
-import humbug
-client = humbug.Client(
-    email=config.HUMBUG_USER,
-    site=config.HUMBUG_SITE,
-    api_key=config.HUMBUG_API_KEY)
+import zulip
+client = zulip.Client(
+    email=config.ZULIP_USER,
+    site=config.ZULIP_SITE,
+    api_key=config.ZULIP_API_KEY)
 svn = pysvn.Client()
 
 path, rev = sys.argv[1:]

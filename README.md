@@ -1,6 +1,6 @@
 #### Dependencies
 
-The Humbug API Python bindings require the following Python libraries:
+The Zulip API Python bindings require the following Python libraries:
 
 * simplejson
 * requests (version >= 0.12.1)
@@ -22,7 +22,7 @@ as we make any changes to them.
 The easiest way to use these API bindings is to base your tools off
 of the example tools under examples/ in this distribution.
 
-If you place your API key in the config file `~/.humbugrc` the Python
+If you place your API key in the config file `~/.zuliprc` the Python
 API bindings will automatically read it in. The format of the config
 file is as follows:
 
@@ -34,16 +34,16 @@ Alternatively, you may explicitly use "--user" and "--api-key" in our
 examples, which is especially useful if you are running several bots
 which share a home directory.
 
-You can obtain your Humbug API key, create bots, and manage bots all
-from your Humbug [settings page](https://humbughq.com/#settings).
+You can obtain your Zulip API key, create bots, and manage bots all
+from your Zulip [settings page](https://zulip.com/#settings).
 
 A typical simple bot sending API messages will look as follows:
 
 At the top of the file:
 
-    # Make sure the Humbug API distribution's root directory is in sys.path, then:
-    import humbug
-    humbug_client = humbug.Client(email="your-bot@example.com")
+    # Make sure the Zulip API distribution's root directory is in sys.path, then:
+    import zulip
+    zulip_client = zulip.Client(email="your-bot@example.com")
 
 When you want to send a message:
 
@@ -53,13 +53,13 @@ When you want to send a message:
       "subject": "your subject",
       "content": "your content",
     }
-    humbug_client.send_message(message)
+    zulip_client.send_message(message)
 
 Additional examples:
 
-    client.send_message({'type': 'stream', 'content': 'Humbug rules!',
+    client.send_message({'type': 'stream', 'content': 'Zulip rules!',
                          'subject': 'feedback', 'to': ['support']})
-    client.send_message({'type': 'private', 'content': 'Humbug rules!',
+    client.send_message({'type': 'private', 'content': 'Zulip rules!',
                          'to': ['user1@example.com', 'user2@example.com']})
 
 send_message() returns a dict guaranteed to contain the following
@@ -69,15 +69,15 @@ msg will describe what went wrong.
 
 #### Sending messages
 
-You can use the included `humbug-send` script to send messages via the
+You can use the included `zulip-send` script to send messages via the
 API directly from existing scripts.
 
-    humbug-send hamlet@example.com cordelia@example.com -m \
+    zulip-send hamlet@example.com cordelia@example.com -m \
         "Conscience doth make cowards of us all."
 
-Alternatively, if you don't want to use your ~/.humbugrc file:
+Alternatively, if you don't want to use your ~/.zuliprc file:
 
-    humbug-send --user shakespeare-bot@example.com \
+    zulip-send --user shakespeare-bot@example.com \
         --api-key a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5 \
         hamlet@example.com cordelia@example.com -m \
         "Conscience doth make cowards of us all."

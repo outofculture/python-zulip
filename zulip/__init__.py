@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright © 2012 Humbug, Inc.
+# Copyright © 2012 Zulip, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -33,7 +33,7 @@ from distutils.version import LooseVersion
 from ConfigParser import SafeConfigParser
 
 
-__version__ = "0.1.9"
+__version__ = "0.2.0"
 
 # Check that we have a recent enough version
 # Older versions don't provide the 'json' attribute on responses.
@@ -41,7 +41,7 @@ assert(LooseVersion(requests.__version__) >= LooseVersion('0.12.1'))
 # In newer versions, the 'json' attribute is a function, not a property
 requests_json_is_function = callable(requests.Response.json)
 
-API_VERSTRING = "/api/v1/"
+API_VERSTRING = "v1/"
 
 def generate_option_group(parser):
     group = optparse.OptionGroup(parser, 'API configuration')
@@ -55,7 +55,7 @@ def generate_option_group(parser):
                      help='Email address of the calling bot or user.')
     group.add_option('--config-file',
                      action='store',
-                     help='Location of an ini file containing the\nabove information. (default ~/.humbugrc)')
+                     help='Location of an ini file containing the\nabove information. (default ~/.zuliprc)')
     group.add_option('-v', '--verbose',
                      action='store_true',
                      help='Provide detailed output.')
@@ -72,7 +72,10 @@ class Client(object):
                  site=None, client="API: Python"):
         if None in (api_key, email):
             if config_file is None:
-                config_file = os.path.join(os.environ["HOME"], ".humbugrc")
+                config_file = os.path.join(os.environ["HOME"], ".zuliprc")
+                if (not os.path.exists(config_file) and
+                    os.path.exists(os.path.join(os.environ["HOME"], ".humbugrc"))):
+                    raise RuntimeError("The Zulip API configuration file is now ~/.zuliprc; please run:\n\n  mv ~/.humbugrc ~/.zuliprc\n")
             if not os.path.exists(config_file):
                 raise RuntimeError("api_key or email not specified and %s does not exist"
                                    % (config_file,))
@@ -90,9 +93,15 @@ class Client(object):
         self.email = email
         self.verbose = verbose
         if site is not None:
+            if not site.startswith("http"):
+                site = "https://" + site
             self.base_url = site
         else:
-            self.base_url = "https://humbughq.com"
+            self.base_url = "https://api.zulip.com"
+        if self.base_url != "https://api.zulip.com" and not self.base_url.endswith("/api"):
+            self.base_url += "/api"
+        if not self.base_url.endswith("/"):
+            self.base_url += "/"
         self.retry_on_errors = retry_on_errors
         self.client_name = client
 
@@ -118,7 +127,7 @@ class Client(object):
             if self.verbose:
                 if not query_state["had_error_retry"]:
                     sys.stdout.write("humbug API(%s): connection error%s -- retrying." % \
-                            (url.split(API_VERSTRING, 2)[1], error_string,))
+                            (url.split(API_VERSTRING, 2)[0], error_string,))
                     query_state["had_error_retry"] = True
                 else:
                     sys.stdout.write(".")
@@ -181,15 +190,19 @@ class Client(object):
                 return {'msg': "Unexpected error:\n%s" % traceback.format_exc(),
                         "result": "unexpected-error"}
 
-            if requests_json_is_function:
-                json_result = res.json()
-            else:
-                json_result = res.json
+            try:
+                if requests_json_is_function:
+                    json_result = res.json()
+                else:
+                    json_result = res.json
+            except Exception:
+                json_result = None
+
             if json_result is not None:
                 end_error_retry(True)
                 return json_result
             end_error_retry(False)
-            return {'msg': res.text, "result": "http-error",
+            return {'msg': "Unexpected error from the server", "result": "http-error",
                     "status_code": res.status_code}
 
     @classmethod
@@ -260,8 +273,10 @@ class Client(object):
 
         self.call_on_each_event(event_callback, ['message'])
 
-def _mk_subs(streams):
-    return {'subscriptions': streams}
+def _mk_subs(streams, **kwargs):
+    result = kwargs
+    result['subscriptions'] = streams
+    return result
 
 def _mk_rm_subs(streams):
     return {'delete': streams}
@@ -271,7 +286,14 @@ def _mk_events(event_types=None):
         return dict()
     return dict(event_types=event_types)
 
+def _kwargs_to_dict(**kwargs):
+    return kwargs
+
 Client._register('send_message', url='messages', make_request=(lambda request: request))
 Client._register('get_messages', method='GET', url='messages/latest', longpolling=True)
 Client._register('get_events', url='events', method='GET', longpolling=True, make_request=(lambda **kwargs: kwargs))
 Client._register('register', make_request=_mk_events)
+Client._register('get_members', method='GET', url='users')
+Client._register('list_subscriptions', method='GET', url='users/me/subscriptions')
+Client._register('add_subscriptions', url='users/me/subscriptions', make_request=_mk_subs)
+Client._register('remove_subscriptions', method='PATCH', url='users/me/subscriptions', make_request=_mk_rm_subs)

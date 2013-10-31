@@ -1,10 +1,10 @@
 Metadata-Version: 1.1
 Name: zulip
-Version: 0.2.0
+Version: 0.2.2
 Summary: Bindings for the Zulip message API
 Home-page: https://www.zulip.com/dist/api/
 Author: Zulip, Inc.
-Author-email: humbug@humbughq.com
+Author-email: support@zulip.com
 License: UNKNOWN
 Description: UNKNOWN
 Platform: UNKNOWN

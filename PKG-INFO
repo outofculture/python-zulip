@@ -5,7 +5,7 @@ Summary: Bindings for the Zulip message API
 Home-page: https://www.zulip.com/dist/api/
 Author: Zulip, Inc.
 Author-email: support@zulip.com
-License: UNKNOWN
+License: MIT
 Description: UNKNOWN
 Platform: UNKNOWN
 Classifier: Development Status :: 3 - Alpha

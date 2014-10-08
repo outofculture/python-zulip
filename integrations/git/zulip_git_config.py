@@ -39,12 +39,12 @@ ZULIP_API_KEY = "0123456789abcdef0123456789abcdef"
 #
 # The default code below will send every commit pushed to "master" to
 # * stream "commits"
-# * subject "deploy => master" (using a pretty unicode right arrow)
+# * topic "master"
 # And similarly for branch "test-post-receive" (for use when testing).
 def commit_notice_destination(repo, branch, commit):
     if branch in ["master", "test-post-receive"]:
         return dict(stream  = "commits",
-                    subject = u"deploy \u21D2 %s" % (branch,))
+                    subject = u"%s" % (branch,))
 
     # Return None for cases where you don't want a notice sent
     return None
@@ -53,13 +53,13 @@ def commit_notice_destination(repo, branch, commit):
 # common customization is to include a link to the commit in your
 # graphical repository viewer, e.g.
 #
-# return '!gravatar(%s) [%s](https://example.com/commits/%s)\n' % (author, subject, commit_id)
+# return '!avatar(%s) [%s](https://example.com/commits/%s)\n' % (author, subject, commit_id)
 def format_commit_message(author, subject, commit_id):
-    return '!gravatar(%s) %s\n' % (author, subject)
+    return '!avatar(%s) %s\n' % (author, subject)
 
 ## If properly installed, the Zulip API should be in your import
 ## path, but if not, set a custom path below
 ZULIP_API_PATH = None
 
-# This should not need to change unless you have a custom Zulip subdomain.
+# If you're using Zulip Enterprise, set this to your Zulip Enterprise server
 ZULIP_SITE = "https://api.zulip.com"

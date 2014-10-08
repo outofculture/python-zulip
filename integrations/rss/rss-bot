@@ -36,7 +36,7 @@ import urlparse
 
 import feedparser
 import zulip
-
+VERSION = "0.9"
 RSS_DATA_DIR = os.path.expanduser(os.path.join('~', '.cache', 'zulip-rss'))
 OLDNESS_THRESHOLD = 30 # days
 
@@ -49,20 +49,20 @@ To use this script:
 1. Create an RSS feed file containing 1 feed URL per line (default feed
    file location: ~/.cache/zulip-rss/rss-feeds)
 2. Subscribe to the stream that will receive RSS updates (default stream: rss)
-3. create a ~/.zuliprc, or specify user and api-key with command line arguments
+3. create a ~/.zuliprc as described on https://zulip.com/api#api_keys
 4. Test the script by running it manually, like this:
 
-/usr/local/share/zulip/demos/rss-bot
+/usr/local/share/zulip/integrations/rss/rss-bot
 
 You can customize the location on the feed file and recipient stream, e.g.:
 
-/usr/local/share/zulip/demos/rss-bot --feed-file=/path/to/my-feeds --stream=my-rss-stream
+/usr/local/share/zulip/integrations/rss/rss-bot --feed-file=/path/to/my-feeds --stream=my-rss-stream
 
 4. Configure a crontab entry for this script. A sample crontab entry for
 processing feeds stored in the default location and sending to the default
 stream every 5 minutes is:
 
-*/5 * * * * /usr/local/share/zulip/demos/rss-bot"""
+*/5 * * * * /usr/local/share/zulip/integrations/rss/rss-bot"""
 
 parser = optparse.OptionParser(usage)
 parser.add_option('--stream',
@@ -135,7 +135,14 @@ def strip_tags(html):
 
 def compute_entry_hash(entry):
     entry_time = entry.get("published", entry.get("updated"))
-    return hashlib.md5(entry.id + entry_time).hexdigest()
+    entry_id = entry.get("id", entry.get("link"))
+    return hashlib.md5(entry_id + entry_time).hexdigest()
+
+def elide_subject(subject):
+    MAX_TOPIC_LENGTH = 60
+    if len(subject) > MAX_TOPIC_LENGTH:
+        subject = subject[:MAX_TOPIC_LENGTH - 3].rstrip() + '...'
+    return subject
 
 def send_zulip(entry, feed_name):
     content = "**[%s](%s)**\n%s\n%s" % (entry.title,
@@ -145,7 +152,7 @@ def send_zulip(entry, feed_name):
     message = {"type": "stream",
                "sender": opts.email,
                "to": opts.stream,
-               "subject": feed_name,
+               "subject": elide_subject(feed_name),
                "content": content,
                }
     return client.send_message(message)
@@ -157,7 +164,7 @@ except IOError:
     log_error_and_exit("Unable to read feed file at %s." % (opts.feed_file,))
 
 client = zulip.Client(email=opts.email, api_key=opts.api_key,
-                       site=opts.site)
+                       site=opts.site, client="ZulipRSS/" + VERSION)
 
 first_message = True
 
@@ -189,7 +196,9 @@ for feed_url in feed_urls:
             # entries in reverse chronological order.
             break
 
-        response = send_zulip(entry, data.feed.title)
+        feed_name = data.feed.title or feed_url
+
+        response = send_zulip(entry, feed_name)
         if response["result"] != "success":
             logger.error("Error processing %s" % (feed_url,))
             logger.error(response)

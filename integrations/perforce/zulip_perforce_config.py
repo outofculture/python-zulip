@@ -1,6 +1,7 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright © 2012 Zulip, Inc.
+# Copyright © 2013 Zulip, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,32 +21,43 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-# See zulip_trac.py for installation and configuration instructions
 
-# Change these constants to configure the plugin:
-ZULIP_USER = "trac-bot@example.com"
+# Change these values to configure authentication for the plugin
+ZULIP_USER = "p4-bot@example.com"
 ZULIP_API_KEY = "0123456789abcdef0123456789abcdef"
-STREAM_FOR_NOTIFICATIONS = "trac"
-TRAC_BASE_TICKET_URL = "https://trac.example.com/ticket"
 
-# Most people find that having every change in Trac result in a
-# notification is too noisy -- in particular, when someone goes
-# through recategorizing a bunch of tickets, that can often be noisy
-# and annoying.  We solve this issue by only sending a notification
-# for changes to the fields listed below.
+# commit_notice_destination() lets you customize where commit notices
+# are sent to with the full power of a Python function.
 #
-# Total list of possible fields is:
-# (priority, milestone, cc, owner, keywords, component, severity,
-#  type, versions, description, resolution, summary, comment)
+# It takes the following arguments:
+# * path   = the path to the Perforce depot on the server
+# * changelist = the changelist id
 #
-# The following is the list of fields which can be changed without
-# triggering a Zulip notification; change these to match your team's
-# workflow.
-TRAC_NOTIFY_FIELDS = ["description", "summary", "resolution", "comment", "owner"]
+# Returns a dictionary encoding the stream and topic to send the
+# notification to (or None to send no notification).
+#
+# The default code below will send every commit except for ones in the
+# "master-plan" and "secret" subdirectories of //depot/ to:
+# * stream "depot_subdirectory-commits"
+# * subject "change_root"
+def commit_notice_destination(path, changelist):
+    dirs = path.split('/')
+    if len(dirs) >= 4 and dirs[3] not in ("*", "..."):
+        directory = dirs[3]
+    else:
+        # No subdirectory, so just use "depot"
+        directory = dirs[2]
+
+    if directory not in ["evil-master-plan", "my-super-secret-repository"]:
+        return dict(stream  = "%s-commits" % (directory,),
+                    subject = path)
+
+    # Return None for cases where you don't want a notice sent
+    return None
 
 ## If properly installed, the Zulip API should be in your import
 ## path, but if not, set a custom path below
 ZULIP_API_PATH = None
 
-# If you're using Zulip Enterprise, set this to your Zulip Enterprise server
+# This should not need to change unless you have a custom Zulip subdomain.
 ZULIP_SITE = "https://api.zulip.com"

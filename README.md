@@ -1,6 +1,7 @@
 #### Dependencies
 
-The Zulip API Python bindings require the following Python libraries:
+The [Zulip API](https://zulip.com/api) Python bindings require the
+following Python libraries:
 
 * simplejson
 * requests (version >= 0.12.1)
@@ -30,9 +31,14 @@ file is as follows:
     key=<api key from the web interface>
     email=<your email address>
 
+If you are using Zulip Enterprise, you should also add
+
+    site=<your Zulip Enterprise server's URI>
+
 Alternatively, you may explicitly use "--user" and "--api-key" in our
 examples, which is especially useful if you are running several bots
-which share a home directory.
+which share a home directory.  There is also a "--site" option for
+setting the Zulip Enterprise server on the command line.
 
 You can obtain your Zulip API key, create bots, and manage bots all
 from your Zulip [settings page](https://zulip.com/#settings).
@@ -43,7 +49,7 @@ At the top of the file:
 
     # Make sure the Zulip API distribution's root directory is in sys.path, then:
     import zulip
-    zulip_client = zulip.Client(email="your-bot@example.com")
+    zulip_client = zulip.Client(email="your-bot@example.com", client="MyTestClient/0.1")
 
 When you want to send a message:
 

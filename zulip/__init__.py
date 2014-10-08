@@ -28,13 +28,14 @@ import urlparse
 import sys
 import os
 import optparse
+import platform
 from distutils.version import LooseVersion
 
 from ConfigParser import SafeConfigParser
 import logging
 
 
-__version__ = "0.2.2"
+__version__ = "0.2.4"
 
 # Check that we have a recent enough version
 # Older versions don't provide the 'json' attribute on responses.
@@ -44,11 +45,14 @@ requests_json_is_function = callable(requests.Response.json)
 
 API_VERSTRING = "v1/"
 
+def _default_client():
+    return "ZulipPython/" + __version__
+
 def generate_option_group(parser):
     group = optparse.OptionGroup(parser, 'API configuration')
     group.add_option('--site',
-                      default=None,
-                      help=optparse.SUPPRESS_HELP)
+                     help="Zulip Enterprise server URI (if using Zulip Enterprise)",
+                     default=None)
     group.add_option('--api-key',
                      action='store')
     group.add_option('--user',
@@ -62,19 +66,25 @@ def generate_option_group(parser):
                      help='Provide detailed output.')
     group.add_option('--client',
                      action='store',
-                     default="API: Python",
+                     default=None,
                      help=optparse.SUPPRESS_HELP)
-
     return group
 
-def init_from_options(options):
-    return Client(email=options.email, api_key=options.api_key, config_file=options.config_file,
-                  verbose=options.verbose, site=options.site, client=options.client)
+def init_from_options(options, client=None):
+    if options.client is not None:
+        client = options.client
+    elif client is None:
+        client = _default_client()
+    return Client(email=options.email, api_key=options.api_key,
+                  config_file=options.config_file, verbose=options.verbose,
+                  site=options.site, client=client)
 
 class Client(object):
     def __init__(self, email=None, api_key=None, config_file=None,
                  verbose=False, retry_on_errors=True,
-                 site=None, client="API: Python"):
+                 site=None, client=None):
+        if client is None:
+            client = _default_client()
         if None in (api_key, email):
             if config_file is None:
                 config_file = os.path.join(os.environ["HOME"], ".zuliprc")
@@ -100,19 +110,37 @@ class Client(object):
         if site is not None:
             if not site.startswith("http"):
                 site = "https://" + site
+            # Remove trailing "/"s from site to simplify the below logic for adding "/api"
+            site = site.rstrip("/")
             self.base_url = site
         else:
             self.base_url = "https://api.zulip.com"
+
         if self.base_url != "https://api.zulip.com" and not self.base_url.endswith("/api"):
             self.base_url += "/api"
-        if not self.base_url.endswith("/"):
-            self.base_url += "/"
+        self.base_url += "/"
         self.retry_on_errors = retry_on_errors
         self.client_name = client
 
+    def get_user_agent(self):
+        vendor = platform.system()
+        vendor_version = platform.release()
+
+        if vendor == "Linux":
+            vendor, vendor_version, dummy = platform.linux_distribution()
+        elif vendor == "Windows":
+            vendor_version = platform.win32_ver()[1]
+        elif vendor == "Darwin":
+            vendor_version = platform.mac_ver()[0]
+
+        return "{client_name} ({vendor}; {vendor_version})".format(
+                client_name=self.client_name,
+                vendor=vendor,
+                vendor_version=vendor_version,
+                )
+
     def do_api_query(self, orig_request, url, method="POST", longpolling = False):
         request = {}
-        request["client"] = self.client_name
 
         for (key, val) in orig_request.iteritems():
             if not (isinstance(val, str) or isinstance(val, unicode)):
@@ -162,6 +190,7 @@ class Client(object):
                         auth=requests.auth.HTTPBasicAuth(self.email,
                                                          self.api_key),
                         verify=True, timeout=90,
+                        headers={"User-agent": self.get_user_agent()},
                         **kwargs)
 
                 # On 50x errors, try again after a short sleep
@@ -221,13 +250,13 @@ class Client(object):
         call.func_name = name
         setattr(cls, name, call)
 
-    def call_on_each_event(self, callback, event_types=None):
+    def call_on_each_event(self, callback, event_types=None, narrow=[]):
         def do_register():
             while True:
                 if event_types is None:
                     res = self.register()
                 else:
-                    res = self.register(event_types=event_types)
+                    res = self.register(event_types=event_types, narrow=narrow)
 
                 if 'error' in res.get('result'):
                     if self.verbose:
@@ -286,10 +315,13 @@ def _mk_subs(streams, **kwargs):
 def _mk_rm_subs(streams):
     return {'delete': streams}
 
-def _mk_events(event_types=None):
+def _mk_deregister(queue_id):
+    return {'queue_id': queue_id}
+
+def _mk_events(event_types=None, narrow=[]):
     if event_types is None:
         return dict()
-    return dict(event_types=event_types)
+    return dict(event_types=event_types, narrow=narrow)
 
 def _kwargs_to_dict(**kwargs):
     return kwargs
@@ -319,6 +351,8 @@ Client._register('send_message', url='messages', make_request=(lambda request: r
 Client._register('get_messages', method='GET', url='messages/latest', longpolling=True)
 Client._register('get_events', url='events', method='GET', longpolling=True, make_request=(lambda **kwargs: kwargs))
 Client._register('register', make_request=_mk_events)
+Client._register('deregister', url="events", method="DELETE", make_request=_mk_deregister)
+Client._register('get_streams', method='GET', url='streams', make_request=_kwargs_to_dict)
 Client._register('get_members', method='GET', url='users')
 Client._register('list_subscriptions', method='GET', url='users/me/subscriptions')
 Client._register('add_subscriptions', url='users/me/subscriptions', make_request=_mk_subs)

@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Zulip notification post-commit hook.
 # Copyright © 2012-2013 Zulip, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,22 +20,30 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
-#
-# The "post-commit" script is run after a transaction is completed and a new
-# revision is created.  It is passed arguments on the command line in this
-# form:
-#  <path> <revision>
-# For example:
-# /srv/svn/carols 1843
+'''Zulip notification change-commit hook.
+
+In Perforce, The "change-commit" trigger is fired after a metadata has been
+created, files have been transferred, and the changelist comitted to the depot
+database.
+
+This specific trigger expects command-line arguments in the form:
+  %change% %changeroot%
+
+For example:
+  1234 //depot/security/src/
+
+'''
 
 import os
 import sys
 import os.path
-import pysvn
+
+import git_p4
+
+__version__ = "0.1"
 
 sys.path.insert(0, os.path.dirname(__file__))
-import zulip_svn_config as config
-VERSION = "0.9"
+import zulip_perforce_config as config
 
 if config.ZULIP_API_PATH is not None:
     sys.path.append(config.ZULIP_API_PATH)
@@ -46,21 +53,31 @@ client = zulip.Client(
     email=config.ZULIP_USER,
     site=config.ZULIP_SITE,
     api_key=config.ZULIP_API_KEY,
-    client="ZulipSVN/" + VERSION)
-svn = pysvn.Client()
+    client="ZulipPerforce/" + __version__)
 
-path, rev = sys.argv[1:]
+try:
+    changelist = int(sys.argv[1])
+    changeroot = sys.argv[2]
+except IndexError:
+    print >> sys.stderr, "Wrong number of arguments.\n\n",
+    print >> sys.stderr,  __doc__
+    sys.exit(-1)
+except ValueError:
+    print >> sys.stderr, "First argument must be an integer.\n\n",
+    print >> sys.stderr, __doc__
+    sys.exit(-1)
 
-# since its a local path, prepend "file://"
-path = "file://" + path
+metadata = git_p4.p4_describe(changelist)
 
-entry = svn.log(path, revision_end=pysvn.Revision(pysvn.opt_revision_kind.number, rev))[0]
-message = """**{0}** committed revision r{1} to `{2}`.
+destination = config.commit_notice_destination(changeroot, changelist)
+if destination is None:
+    # Don't forward the notice anywhere
+    sys.exit(0)
+
+message = """**{0}** committed revision @{1} to `{2}`.
 
 > {3}
-""".format(entry['author'], rev, path.split('/')[-1], entry['revprops']['svn:log'])
-
-destination = config.commit_notice_destination(path, rev)
+""".format(metadata["user"], metadata["change"], changeroot, metadata["desc"])
 
 message_data = {
     "type": "stream",

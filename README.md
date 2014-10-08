@@ -9,7 +9,11 @@ following Python libraries:
 
 #### Installing
 
-This package uses distutils, so you can just run:
+Pull the package from PyPi using pip:
+
+    pip install zulip
+
+Or, this package uses distutils, so you can install from source:
 
     python setup.py install
 
